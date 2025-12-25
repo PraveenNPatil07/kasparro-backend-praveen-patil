@@ -7,11 +7,11 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_SERVER: str = "db"
-    POSTGRES_PORT: str = "5432"
-    POSTGRES_DB: str = "kasparro"
+    POSTGRES_USER: Optional[str] = None
+    POSTGRES_PASSWORD: Optional[str] = None
+    POSTGRES_SERVER: Optional[str] = None
+    POSTGRES_PORT: Optional[str] = None
+    POSTGRES_DB: Optional[str] = None
     DATABASE_URL: Optional[str] = None
     
     def get_database_url(self) -> str:
@@ -20,11 +20,21 @@ class Settings(BaseSettings):
             if self.DATABASE_URL.startswith("postgres://"):
                 return self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
             return self.DATABASE_URL
-        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        
+        # Fallback to defaults if env vars are missing
+        user = self.POSTGRES_USER or "postgres"
+        password = self.POSTGRES_PASSWORD or "postgres"
+        server = self.POSTGRES_SERVER or "db"
+        port = self.POSTGRES_PORT or "5432"
+        db = self.POSTGRES_DB or "kasparro"
+        
+        return f"postgresql://{user}:{password}@{server}:{port}/{db}"
     
-    API_KEY: str = "test_key"
+    # Security: Use environment variables for these
+    # Do NOT hardcode actual keys here
+    API_KEY: Optional[str] = None
     COINPAPRIKA_API_KEY: Optional[str] = None
-    DEBUG: bool = True
+    DEBUG: bool = False
 
     model_config = ConfigDict(case_sensitive=True, env_file=".env")
 
