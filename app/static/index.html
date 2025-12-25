@@ -34,13 +34,13 @@
             </div>
           </div>
           <div class="flex items-center space-x-4">
-            <div class="flex items-center text-sm">
-              <span
-                class="mr-2 px-2 py-1 bg-indigo-500 rounded-full text-xs font-semibold"
-                x-text="health.status === 'healthy' ? 'System Online' : 'Checking...'"
-              ></span>
-              <span class="text-indigo-200" x-text="'v' + version"></span>
-            </div>
+            <a
+              href="/docs"
+              class="bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold py-1.5 px-3 rounded-full flex items-center transition-all shadow-sm"
+            >
+              <i class="fas fa-book mr-1.5"></i>
+              API Docs
+            </a>
           </div>
         </div>
       </div>
