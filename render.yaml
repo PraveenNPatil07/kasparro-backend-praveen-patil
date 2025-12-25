@@ -22,7 +22,7 @@ services:
       - key: API_KEY
         generateValue: true
       - key: COINPAPRIKA_API_KEY
-        sync: false # User will provide this manually in Render dashboard if needed
+        value: ""
       - key: DEBUG
         value: "false"
     autoDeploy: true
