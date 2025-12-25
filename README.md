@@ -68,7 +68,7 @@ We use Docker and Docker Compose to orchestrate the entire stack into a single, 
 
 ```bash
 # Clone the repository
-git clone <repo-url>
+git clone "https://github.com/PraveenNPatil07/kasparro-backend-praveen-patil.git"
 cd kasparro-backend-praveen-patil
 
 # Create .env file
