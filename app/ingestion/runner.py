@@ -16,26 +16,26 @@ def run_etl():
         # 1. CSV Extraction
         logger.info(f"Starting CSV Ingestion (Run: {batch_run_id})...")
         csv_path = os.path.join("data", "products.csv")
-        csv_extractor = CSVExtractor(db, csv_path, run_id=batch_run_id)
+        csv_extractor = CSVExtractor(db, csv_path, run_id=f"{batch_run_id}_csv")
         csv_extractor.run()
         logger.info("CSV Ingestion completed.")
 
         # 2. CoinPaprika Extraction
         logger.info(f"Starting CoinPaprika Ingestion (Run: {batch_run_id})...")
-        cp_extractor = CoinPaprikaExtractor(db, run_id=batch_run_id)
+        cp_extractor = CoinPaprikaExtractor(db, run_id=f"{batch_run_id}_cp")
         cp_extractor.run()
         logger.info("CoinPaprika Ingestion completed.")
 
         # 3. CoinGecko Extraction
         logger.info(f"Starting CoinGecko Ingestion (Run: {batch_run_id})...")
-        cg_extractor = CoinGeckoExtractor(db, run_id=batch_run_id)
+        cg_extractor = CoinGeckoExtractor(db, run_id=f"{batch_run_id}_cg")
         cg_extractor.run()
         logger.info("CoinGecko Ingestion completed.")
 
         # 4. RSS Extraction
         logger.info(f"Starting RSS Ingestion (Run: {batch_run_id})...")
         rss_url = "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en"
-        rss_extractor = RSSExtractor(db, rss_url, run_id=batch_run_id)
+        rss_extractor = RSSExtractor(db, rss_url, run_id=f"{batch_run_id}_rss")
         rss_extractor.run()
         logger.info("RSS Ingestion completed.")
 

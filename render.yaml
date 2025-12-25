@@ -1,17 +1,8 @@
-# Kasparro Infrastructure Blueprint (Dockerized)
-name: kasparro-backend-system
-region: oregon
-
-databases:
-  - name: kasparro-db
-    plan: free
-
 services:
   # 1. FastAPI Web Service (Docker)
   - type: web
     name: kasparro-api
     env: docker
-    dockerfile: Dockerfile
     plan: free
     healthCheckPath: /api/v1/health
     envVars:
@@ -26,3 +17,7 @@ services:
       - key: DEBUG
         value: "false"
     autoDeploy: true
+
+databases:
+  - name: kasparro-db
+    plan: free
