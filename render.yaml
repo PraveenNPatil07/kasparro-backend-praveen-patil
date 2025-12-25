@@ -1,18 +1,18 @@
-# Kasparro Infrastructure Blueprint
-name: kasparro-system
+# Kasparro Infrastructure Blueprint (Dockerized)
+name: kasparrobackend
+region: oregon
+
 databases:
   - name: kasparro-db
-    databaseName: kasparro
-    user: postgres
     plan: free
 
 services:
-  # 1. FastAPI Web Service
+  # 1. FastAPI Web Service (Docker)
   - type: web
     name: kasparro-api
     env: docker
     dockerfile: Dockerfile
-    plan: free # Change to 'starter' or higher for production
+    plan: free
     healthCheckPath: /api/v1/health
     envVars:
       - key: DATABASE_URL
@@ -25,16 +25,21 @@ services:
         value: "false"
     autoDeploy: true
 
-  # 3. ETL Cron Job (Optional: Requires paid plan)
-  # - type: cron
-  #   name: kasparro-etl
-  #   env: docker
-  #   dockerfile: Dockerfile
-  #   dockerCommand: python -m app.ingestion.runner
-  #   schedule: "0 * * * *" # Runs every hour
-  #   plan: starter # Cron jobs require a paid plan on Render
-  #   envVars:
-  #     - key: DATABASE_URL
-  #       fromDatabase:
-  #         name: kasparro-db
-  #         property: connectionString
+  # 2. ETL Worker (Docker - Optional Background Worker)
+  # Note: Render Free Tier only allows 1 web service.
+  # This worker is defined but can be deployed separately or as part of the API.
+  - type: worker
+    name: kasparro-etl
+    env: docker
+    dockerfile: Dockerfile
+    dockerCommand: python -m app.ingestion.runner
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kasparro-db
+          property: connectionString
+      - key: API_KEY
+        fromService:
+          name: kasparro-api
+          envVar: API_KEY
