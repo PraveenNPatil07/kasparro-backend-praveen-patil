@@ -1,12 +1,13 @@
-services:
-  # 1. Managed PostgreSQL Database
-  - type: database
-    name: kasparro-db
+# Kasparro Infrastructure Blueprint
+name: kasparro-system
+databases:
+  - name: kasparro-db
     databaseName: kasparro
     user: postgres
-    plan: free # Change to 'starter' or higher for production
+    plan: free
 
-  # 2. FastAPI Web Service
+services:
+  # 1. FastAPI Web Service
   - type: web
     name: kasparro-api
     env: docker
