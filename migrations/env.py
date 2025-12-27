@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 # Import your models here
 from app.core.database import Base
-from app.core.models import ETLCheckpoint, ETLRun, RawData, UnifiedData
+from app.core.models import ETLCheckpoint, ETLRun, RawData, UnifiedData, CanonicalAsset, AssetMapping
 from app.core.config import settings
 
 # this is the Alembic Config object, which provides
@@ -69,6 +69,8 @@ def run_migrations_online() -> None:
     with connectable.connect() as connection:
         context.configure(
             connection=connection, target_metadata=target_metadata
+        )
+
         with context.begin_transaction():
             context.run_migrations()
 

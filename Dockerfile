@@ -30,5 +30,8 @@ ENV PYTHONUNBUFFERED=1
 # Expose port
 EXPOSE 8000
 
+# Make start.sh executable
+RUN chmod +x start.sh
+
 # Run the application
-CMD ["python", "app/main.py"]
+CMD ["./start.sh"]
