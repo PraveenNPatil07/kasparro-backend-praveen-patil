@@ -10,14 +10,24 @@ class RawDataCreate(BaseModel):
 class UnifiedDataCreate(BaseModel):
     source: str
     external_id: str
+    canonical_id: Optional[int] = None
     title: str
     description: Optional[str] = None
     data: Dict[str, Any] = Field(default_factory=dict)
 
 class UnifiedDataRead(UnifiedDataCreate):
     id: int
+    canonical_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class CanonicalAssetRead(BaseModel):
+    id: int
+    symbol: str
+    name: str
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 

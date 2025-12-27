@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
+import time
+import uuid
 from sqlalchemy.orm import Session
 from app.core.models import ETLCheckpoint, ETLRun, RawData, UnifiedData
 from app.schemas.data import RawDataCreate, UnifiedDataCreate
-import time
-import uuid
 
 class BaseExtractor(ABC):
     def __init__(self, source_name: str, db: Session, run_id: Optional[str] = None):
@@ -25,25 +25,18 @@ class BaseExtractor(ABC):
         checkpoint = self.db.query(ETLCheckpoint).filter(ETLCheckpoint.source == self.source_name).first()
         return checkpoint.last_processed_at if checkpoint else None
 
-    def update_checkpoint(self, last_processed_at: datetime):
-        checkpoint = self.db.query(ETLCheckpoint).filter(ETLCheckpoint.source == self.source_name).first()
-        if not checkpoint:
-            checkpoint = ETLCheckpoint(source=self.source_name)
-            self.db.add(checkpoint)
-        
-        checkpoint.last_processed_at = last_processed_at
-        checkpoint.last_run_id = self.run_id
-        self.db.flush()
-
     def run(self):
         start_time = time.time()
         records_processed = 0
         status = "success"
         error_message = None
+        
+        # Ensure we have a unique run_id for this specific execution
+        current_run_id = str(uuid.uuid4())
 
         # Record start of run
         etl_run = ETLRun(
-            run_id=self.run_id,
+            run_id=current_run_id,
             source=self.source_name,
             status="in_progress",
             started_at=datetime.now(timezone.utc)
@@ -83,6 +76,7 @@ class BaseExtractor(ABC):
                     
                     # UPSERT logic for UnifiedData
                     existing_unified = self.db.query(UnifiedData).filter(
+                        UnifiedData.source == unified_schema.source,
                         UnifiedData.external_id == unified_schema.external_id
                     ).first()
 
@@ -90,11 +84,12 @@ class BaseExtractor(ABC):
                         existing_unified.title = unified_schema.title
                         existing_unified.description = unified_schema.description
                         existing_unified.data = unified_schema.data
-                        existing_unified.source = unified_schema.source
+                        existing_unified.canonical_id = unified_schema.canonical_id
                     else:
                         new_unified = UnifiedData(
                             source=unified_schema.source,
                             external_id=unified_schema.external_id,
+                            canonical_id=unified_schema.canonical_id,
                             title=unified_schema.title,
                             description=unified_schema.description,
                             data=unified_schema.data
@@ -104,35 +99,29 @@ class BaseExtractor(ABC):
                     records_processed += 1
                     
                     # Update latest_timestamp if available in record
-                    record_ts = raw_record.get('updated_at') or raw_record.get('published') or raw_record.get('created_at') or raw_record.get('last_updated')
-                    if record_ts:
-                        if isinstance(record_ts, str):
-                            try:
-                                # Basic ISO format handling, can be improved
-                                record_ts = datetime.fromisoformat(record_ts.replace('Z', '+00:00'))
-                            except ValueError:
-                                record_ts = None
-                        
-                        # Ensure record_ts is aware for comparison
-                        if record_ts and record_ts.tzinfo is None:
-                            record_ts = record_ts.replace(tzinfo=timezone.utc)
-                        
-                        # Ensure latest_timestamp is aware for comparison
-                        temp_latest = latest_timestamp
-                        if temp_latest and temp_latest.tzinfo is None:
-                            temp_latest = temp_latest.replace(tzinfo=timezone.utc)
-                        
-                        if record_ts and (not temp_latest or record_ts > temp_latest):
-                            latest_timestamp = record_ts
+                    record_ts_str = raw_record.get('last_updated') or raw_record.get('created_at') or raw_record.get('published')
+                    if record_ts_str:
+                        try:
+                            if isinstance(record_ts_str, str):
+                                record_ts = datetime.fromisoformat(record_ts_str.replace('Z', '+00:00'))
+                            else:
+                                record_ts = record_ts_str
+                            
+                            if record_ts.tzinfo is None:
+                                record_ts = record_ts.replace(tzinfo=timezone.utc)
+                                
+                            if not latest_timestamp or record_ts > latest_timestamp:
+                                latest_timestamp = record_ts
+                        except (ValueError, TypeError):
+                            pass
 
                 if latest_timestamp:
-                    self.update_checkpoint(latest_timestamp)
+                    self.update_checkpoint_internal(latest_timestamp, current_run_id)
             
             status = "success"
         except Exception as e:
             status = "failure"
             error_message = str(e)
-            # The nested transaction is automatically rolled back by the 'with' block if an exception occurs
             raise e
         finally:
             end_time = time.time()
@@ -147,3 +136,13 @@ class BaseExtractor(ABC):
                 etl_run.error_message = error_message
                 etl_run.ended_at = datetime.now(timezone.utc)
                 self.db.commit()
+
+    def update_checkpoint_internal(self, last_processed_at: datetime, run_id: str):
+        checkpoint = self.db.query(ETLCheckpoint).filter(ETLCheckpoint.source == self.source_name).first()
+        if not checkpoint:
+            checkpoint = ETLCheckpoint(source=self.source_name)
+            self.db.add(checkpoint)
+        
+        checkpoint.last_processed_at = last_processed_at
+        checkpoint.last_run_id = run_id
+        self.db.flush()

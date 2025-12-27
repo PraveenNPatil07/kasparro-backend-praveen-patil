@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, select
 from typing import List, Optional
 from app.core.database import get_db
-from app.core.models import UnifiedData, ETLRun, ETLCheckpoint
-from app.schemas.data import UnifiedDataRead, HealthStatus, ETLStats
+from app.core.models import UnifiedData, ETLRun, ETLCheckpoint, CanonicalAsset
+from app.schemas.data import UnifiedDataRead, HealthStatus, ETLStats, CanonicalAssetRead
 from app.core.rate_limiter import rate_limiter
 from app.ingestion.csv_source import CSVExtractor
 import shutil
@@ -18,6 +18,7 @@ def get_data(
     skip: int = 0,
     limit: int = 100,
     source: Optional[str] = None,
+    canonical_id: Optional[int] = None,
     search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
@@ -26,10 +27,19 @@ def get_data(
     if source:
         query = query.filter(UnifiedData.source == source)
     
+    if canonical_id:
+        query = query.filter(UnifiedData.canonical_id == canonical_id)
+    
     if search:
         query = query.filter(UnifiedData.title.ilike(f"%{search}%") | UnifiedData.description.ilike(f"%{search}%"))
     
     return query.order_by(UnifiedData.created_at.desc()).offset(skip).limit(limit).all()
+
+@router.get("/assets", response_model=List[CanonicalAssetRead])
+def get_assets(
+    db: Session = Depends(get_db)
+):
+    return db.query(CanonicalAsset).all()
 
 @router.get("/health", response_model=HealthStatus)
 def health_check(db: Session = Depends(get_db)):
@@ -50,7 +60,7 @@ def health_check(db: Session = Depends(get_db)):
     # Let's count how many unique run_ids exist where ALL sources succeeded.
     
     # Subquery to find run_ids that have any failure
-    failed_runs = db.query(ETLRun.run_id).filter(ETLRun.status == "failure").distinct().subquery()
+    failed_runs = select(ETLRun.run_id).filter(ETLRun.status == "failure").distinct()
     
     # Count run_ids that are not in the failed_runs list
     success_runs = db.query(ETLRun.run_id).filter(

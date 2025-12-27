@@ -23,7 +23,7 @@ def test_csv_extraction_incremental(db):
     extractor.run()
     
     assert db.query(UnifiedData).count() == 2
-    checkpoint = db.query(ETLCheckpoint).filter(ETLCheckpoint.source == "csv_products").first()
+    checkpoint = db.query(ETLCheckpoint).filter(ETLCheckpoint.source == "csv_crypto").first()
     assert checkpoint is not None
     assert checkpoint.last_processed_at.year == 2023
     
@@ -44,7 +44,7 @@ def test_csv_extraction_incremental(db):
     assert db.query(UnifiedData).count() == 3
     
     # ETLRun records should reflect the counts
-    runs = db.query(ETLRun).filter(ETLRun.source == "csv_products").order_by(ETLRun.started_at.asc()).all()
+    runs = db.query(ETLRun).filter(ETLRun.source == "csv_crypto").order_by(ETLRun.started_at.asc()).all()
     assert len(runs) == 2
     assert runs[0].records_processed == 2
     assert runs[1].records_processed == 1
@@ -71,19 +71,19 @@ def test_extraction_failure_recovery(db):
             extractor.run()
         
         # Check that the run was recorded as failure
-        run = db.query(ETLRun).filter(ETLRun.source == "csv_products").first()
-        assert run is not None, "ETLRun record should exist"
-        assert run.status == "failure"
-        assert run.error_message == "Simulated failure"
-        
-        # Restore extract and run again
-        extractor.extract = original_extract
-        extractor.run()
-        
-        # Should now succeed and have 1 record
-        assert db.query(UnifiedData).count() == 1
-        new_run = db.query(ETLRun).filter(ETLRun.source == "csv_products", ETLRun.status == "success").first()
-        assert new_run is not None
+            run = db.query(ETLRun).filter(ETLRun.source == "csv_crypto").first()
+            assert run is not None, "ETLRun record should exist"
+            assert run.status == "failure"
+            assert run.error_message == "Simulated failure"
+            
+            # Restore extract and run again
+            extractor.extract = original_extract
+            extractor.run()
+            
+            # Should now succeed and have 1 record
+            assert db.query(UnifiedData).count() == 1
+            new_run = db.query(ETLRun).filter(ETLRun.source == "csv_crypto", ETLRun.status == "success").first()
+            assert new_run is not None
     finally:
         if os.path.exists(csv_path):
             try:

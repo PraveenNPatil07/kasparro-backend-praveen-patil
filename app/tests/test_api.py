@@ -1,5 +1,5 @@
 from app.core.models import UnifiedData, ETLRun
-from datetime import datetime
+from datetime import datetime, timezone
 
 def test_health_endpoint(client):
     response = client.get("/api/v1/health")
@@ -38,7 +38,7 @@ def test_stats_endpoint(client, db):
         status="success",
         records_processed=100,
         duration_ms=500.0,
-        started_at=datetime.utcnow()
+        started_at=datetime.now(timezone.utc)
     ))
     db.commit()
     

@@ -1,30 +1,34 @@
+# Stage 1: Build
+FROM python:3.11-slim as builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install python dependencies
+COPY requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# Stage 2: Runtime
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpq-dev \
-    make \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the rest of the application
+# Copy only the installed packages from builder
+COPY --from=builder /root/.local /root/.local
 COPY . .
 
-# Make start script executable
-RUN chmod +x start.sh
-
-# Set environment variables
+# Update PATH to include the user's local bin
+ENV PATH=/root/.local/bin:$PATH
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
-# Expose the port the app runs on
+# Expose port
 EXPOSE 8000
 
-# Default command
-CMD ["./start.sh"]
+# Run the application
+CMD ["python", "app/main.py"]

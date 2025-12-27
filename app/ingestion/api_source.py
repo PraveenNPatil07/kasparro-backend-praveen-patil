@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from app.ingestion.base import BaseExtractor
 from app.schemas.data import UnifiedDataCreate
 from app.core.config import settings
+from app.core.identity import resolve_canonical_id
 
 class CoinPaprikaExtractor(BaseExtractor):
     def __init__(self, db, run_id: Optional[str] = None):
@@ -26,9 +27,18 @@ class CoinPaprikaExtractor(BaseExtractor):
         # CoinPaprika format: {id, name, symbol, last_updated, quotes: {USD: {price, ...}}}
         quotes = raw_data.get('quotes', {}).get('USD', {})
         
+        canonical_id = resolve_canonical_id(
+            db=self.db,
+            source=self.source_name,
+            external_id=raw_data['id'],
+            symbol=raw_data['symbol'],
+            name=raw_data['name']
+        )
+        
         return UnifiedDataCreate(
             source=self.source_name,
             external_id=f"cp_{raw_data['id']}",
+            canonical_id=canonical_id,
             title=f"{raw_data['name']} ({raw_data['symbol']})",
             description=f"Market Cap: ${quotes.get('market_cap', 0):,.2f}",
             data={
@@ -60,9 +70,18 @@ class CoinGeckoExtractor(BaseExtractor):
 
     def transform(self, raw_data: Dict[str, Any]) -> UnifiedDataCreate:
         # CoinGecko format: {id, symbol, name, current_price, market_cap, last_updated, ...}
+        canonical_id = resolve_canonical_id(
+            db=self.db,
+            source=self.source_name,
+            external_id=raw_data['id'],
+            symbol=raw_data['symbol'],
+            name=raw_data['name']
+        )
+        
         return UnifiedDataCreate(
             source=self.source_name,
             external_id=f"cg_{raw_data['id']}",
+            canonical_id=canonical_id,
             title=f"{raw_data['name']} ({raw_data['symbol'].upper()})",
             description=f"Market Cap Rank: {raw_data.get('market_cap_rank')}",
             data={
