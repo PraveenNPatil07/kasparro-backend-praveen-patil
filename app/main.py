@@ -5,11 +5,44 @@ from app.core.config import settings
 from app.api.endpoints import router as api_router
 import os
 import time
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST, REGISTRY
 
-# Prometheus metrics
-REQUEST_COUNT = Counter("http_requests_total", "Total HTTP Requests", ["method", "endpoint", "http_status"])
-REQUEST_LATENCY = Histogram("http_request_duration_seconds", "HTTP Request Latency", ["method", "endpoint"])
+# Prometheus metrics - using a function with try-except to avoid duplicate registration
+def get_metrics():
+    try:
+        request_count = Counter(
+            "http_requests_total", 
+            "Total HTTP Requests", 
+            ["method", "endpoint", "http_status"]
+        )
+    except ValueError:
+        # If already registered, find it in the registry
+        for collector in REGISTRY._collector_to_names:
+            if hasattr(collector, "_name") and collector._name == "http_requests_total":
+                request_count = collector
+                break
+        else:
+            # Fallback if not found but still raising ValueError
+            # This shouldn't happen but for safety:
+            request_count = Counter("http_requests_total_alt", "Total HTTP Requests", ["method", "endpoint", "http_status"])
+
+    try:
+        request_latency = Histogram(
+            "http_request_duration_seconds", 
+            "HTTP Request Latency", 
+            ["method", "endpoint"]
+        )
+    except ValueError:
+        for collector in REGISTRY._collector_to_names:
+            if hasattr(collector, "_name") and collector._name == "http_request_duration_seconds":
+                request_latency = collector
+                break
+        else:
+            request_latency = Histogram("http_request_duration_seconds_alt", "HTTP Request Latency", ["method", "endpoint"])
+            
+    return request_count, request_latency
+
+REQUEST_COUNT, REQUEST_LATENCY = get_metrics()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -66,5 +99,11 @@ def root():
 
 if __name__ == "__main__":
     import uvicorn
-    # Use standard uvicorn worker for production
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, workers=4)
+    import os
+    
+    # Get port from environment variable for Render/Heroku compatibility
+    port = int(os.environ.get("PORT", 8000))
+    
+    # Run uvicorn
+    # Reduced workers to 1 for stability in limited resource environments
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port, log_level="info")
