@@ -1,7 +1,7 @@
-id,title,description,price,created_at
-1,Product A,A great product,10.99,2023-12-01T10:00:00Z
-2,Product B,Another cool item,25.00,2023-12-02T11:30:00Z
-3,Product C,Budget friendly,5.50,2023-12-03T09:15:00Z
+id,symbol,name,price,created_at
+1,BTC,Bitcoin,45000.00,2023-12-01T10:00:00Z
+2,ETH,Ethereum,2500.00,2023-12-02T11:30:00Z
+3,SOL,Solana,100.00,2023-12-03T09:15:00Z
 4,Wireless Mouse,Ergonomic 2.4GHz mouse,15.99,2025-12-25T10:00:00Z
 5,Mechanical Keyboard,RGB backlit blue switch,59.99,2025-12-25T11:00:00Z
 6,USB-C Hub,7-in-1 adapter with HDMI,34.50,2025-12-25T12:00:00Z
